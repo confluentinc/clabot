@@ -1,7 +1,7 @@
 'use strict'
 
 _      = require 'lodash'
-github = require 'github'
+{ Octokit } = require '@octokit/rest'
 
 errorHandler = (err, res) ->
   msg = 'Fatal Error: GitHub refused to list Collaborators/Contributors'
@@ -10,26 +10,25 @@ errorHandler = (err, res) ->
   res.send 500, msg
 
 exports = module.exports = (res, sender, options, contractors, msg, callback) ->
-  api = new github
-    version: '3.0.0'
-
-  api.authenticate
-    type: 'oauth'
-    token: options.token
+  api = new Octokit {
+    auth: options.token
+  }
 
   collabs = (toBeSkipped, callback) ->
-    api.repos.getCollaborators msg, (err, collaborators) ->
-      if err then errorHandler err, res
+    api.rest.repos.listCollaborators(msg).then ({ data: collaborators }) ->
       _.each collaborators, (collaborator) ->
         toBeSkipped.push collaborator.login
       callback toBeSkipped
+    .catch (err) ->
+      errorHandler err, res
 
   contribs = (toBeSkipped, callback) ->
-    api.repos.getContributors msg, (err, contributors) ->
-      if err then errorHandler err, res
+    api.rest.repos.listContributors(msg).then ({ data: contributors }) ->
       _.each contributors, (contributor) ->
         toBeSkipped.push contributor.login
       callback toBeSkipped
+    .catch (err) ->
+      errorHandler err, res
 
   skip = (toBeSkipped) ->
     if _.contains toBeSkipped, sender

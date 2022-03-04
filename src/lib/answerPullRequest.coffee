@@ -12,10 +12,10 @@ exports = module.exports = (req, res, options, contractors, payload) ->
   repo   = payload.repository.name
   user   = payload.repository.owner.login
 
-  skip res, sender, options, contractors, { user, repo }, (contractors) ->
+  skip res, sender, options, contractors, { owner: user, repo }, (contractors) ->
     signed = _.contains contractors, sender
 
-    commentData      = { user, repo, number }
+    commentData      = { owner: user, repo, issue_number: number }
     commentData.body = comment.getCommentBody signed,
         options.templates,
         _.extend options.templateData, { sender, payload }

@@ -3,7 +3,7 @@ fs   = require 'fs'
 path = require 'path'
 
 _      = require 'lodash'
-github = require 'github'
+{ Octokit } = require '@octokit/rest'
 
 exports.getCommentBody = (signed, templates = {}, templateData) ->
   if arguments.length is 2
@@ -40,11 +40,11 @@ exports.getCommentBody = (signed, templates = {}, templateData) ->
     _.template templates.notYetSigned, templateData
 
 exports.send = (token, msg, callback) ->
-  api = new github
-    version: '3.0.0'
+  api = new Octokit {
+    auth: token
+  }
 
-  api.authenticate
-    type: 'oauth'
-    token: token
-
-  api.issues.createComment msg, callback
+  api.rest.issues.createComment(msg).then (data) ->
+    callback null, data
+  .catch (err) ->
+    callback err, null

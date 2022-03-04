@@ -1,7 +1,7 @@
 'use strict'
 
 _      = require 'lodash'
-github = require 'github'
+{ Octokit } = require '@octokit/rest'
 
 comment  = require './comment'
 
@@ -26,18 +26,15 @@ exports = module.exports = (req, res, options, contractors, payload) ->
 
   [method, argument] = (body.match(regex) or []).slice 2
 
-  api = new github
-    version: '3.0.0'
+  api = new Octokit {
+    auth: options.token
+  }
 
-  api.authenticate
-    type: 'oauth'
-    token: options.token
-
-  api.user.get {}, (err, data) ->
+  callback = (err, data) ->
     if not err and method is 'check' and data.login isnt poster
       signed = _.contains contractors, argument or sender
 
-      commentData      = { user, repo, number }
+      commentData      = { owner: user, repo, issue_number: number }
       commentData.body = comment.getCommentBody signed,
           options.templates,
           _.extend options.templateData,
@@ -94,3 +91,8 @@ exports = module.exports = (req, res, options, contractors, payload) ->
       if err then console.log err
       console.log   'Could not find proper clabot command in comment'
       res.send 200, 'Could not find proper clabot command in comment'
+
+  api.rest.users.getAuthenticated().then ({ data }) ->
+    callback(null, data)
+  .catch (err) ->
+    callback(err)
